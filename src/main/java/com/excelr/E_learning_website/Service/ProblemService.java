@@ -2,7 +2,10 @@ package com.excelr.E_learning_website.Service;
 
 import com.excelr.E_learning_website.Entity.Problem;
 import com.excelr.E_learning_website.Repository.ProblemRepository;
+import com.excelr.E_learning_website.dto.Problemdto;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
@@ -15,7 +18,16 @@ public class ProblemService {
         return problemRepository.findById(problemId);
     }
 
-    public Problem createProblem(Problem problem) {
+    public Problem createProblem(Problemdto problemDto) {
+        Problem problem = new Problem();
+        problem.setId(problem.getId());
+        problem.setLanguage(problemDto.getLanguage());
+        problem.setTopicname(problemDto.getTopicname());
+        problem.setName(problemDto.getName());
+        problem.setLeetcodeLink(problemDto.getLeetcodeLink());
+        problem.setTutorialLink(problemDto.getTutorialLink());
+        problem.setDifficultyLevel(problemDto.getDifficultyLevel());
+        problem.setStepsToApproach(problemDto.getStepsToApproach());
         return problemRepository.save(problem);
     }
 

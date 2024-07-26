@@ -2,7 +2,10 @@ package com.excelr.E_learning_website.Controller;
 
 import com.excelr.E_learning_website.Entity.Problem;
 import com.excelr.E_learning_website.Service.ProblemService;
+import com.excelr.E_learning_website.dto.Problemdto;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Optional;
@@ -19,9 +22,9 @@ public class ProblemController {
     }
 
     @PostMapping("/create")
-    public Problem createProblem( @RequestBody Problem problem){
-        return problemService.createProblem(problem);
-
+    public ResponseEntity<Problem> createProblem(@RequestBody Problemdto problem) {
+        System.out.println("problem uploded ");
+        return new ResponseEntity<>(problemService.createProblem(problem), HttpStatus.CREATED);
     }
 
     @PutMapping("/{problemId}")
