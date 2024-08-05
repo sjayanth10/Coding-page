@@ -1,24 +1,31 @@
 package com.excelr.E_learning_website.Service;
 
 import com.excelr.E_learning_website.Entity.Problem;
+import com.excelr.E_learning_website.Exception.ProblemNotFoundException;
 import com.excelr.E_learning_website.Repository.ProblemRepository;
-import com.excelr.E_learning_website.dto.Problemdto;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Optional;
 @Service
 public class ProblemService {
     @Autowired
     private ProblemRepository problemRepository;
 
-    public Optional<Problem> getProblemBYId(Long problemId) {
-        return problemRepository.findById(problemId);
+    public List<Problem> getAllProblems(String topicname, String difficultyLevel) {
+        if (topicname != null && difficultyLevel != null) {
+            return problemRepository. findByTopicnameAndDifficultyLevel(topicname, difficultyLevel);
+        } else if (topicname != null) {
+            return problemRepository.findByTopicname(topicname);
+        } else if (difficultyLevel!= null) {
+            return problemRepository.findByDifficultyLevel(difficultyLevel);
+        } else {
+            return problemRepository.findAll();
+        }
     }
 
-    public Problem createProblem(Problemdto problemDto) {
+    public Problem createProblem(Problem problemDto) {
         Problem problem = new Problem();
         problem.setId(problem.getId());
         problem.setLanguage(problemDto.getLanguage());
@@ -32,7 +39,7 @@ public class ProblemService {
     }
 
     public Problem updateProblem(Long problemId, Problem problemDetails) {
-        Problem problem = problemRepository.findById(problemId).orElseThrow(() -> new RuntimeException("Problem not found"));
+        Problem problem = problemRepository.findById(problemId).orElseThrow(() -> new ProblemNotFoundException("Problem not found"));
         problem.setLanguage(problemDetails.getLanguage());
         problem.setName(problemDetails.getName());
         problem.setLeetcodeLink(problemDetails.getLeetcodeLink());
@@ -43,19 +50,28 @@ public class ProblemService {
     }
 
     public void deleteProblem(Long problemId) {
-        Problem problem = problemRepository.findById(problemId).orElseThrow(() -> new RuntimeException("Problem not found"));
+        Problem problem = problemRepository.findById(problemId)
+                .orElseThrow(() -> new ProblemNotFoundException("Problem not found with id: " + problemId));
         problemRepository.delete(problem);
-
     }
 
     public String getTutorialForProblem(Long problemId) {
-        Problem problem = problemRepository.findById(problemId).orElseThrow(() -> new RuntimeException("Problem not found"));
+        Problem problem = problemRepository.findById(problemId)
+                .orElseThrow(() -> new ProblemNotFoundException("Problem not found with id: " + problemId));
         return problem.getTutorialLink();
-
     }
 
     public String getSolutionForProblem(Long problemId) {
-        Problem problem = problemRepository.findById(problemId).orElseThrow(() -> new RuntimeException("Problem not found"));
+        Problem problem = problemRepository.findById(problemId)
+                .orElseThrow(() -> new ProblemNotFoundException("Problem not found with id: " + problemId));
         return problem.getStepsToApproach();
     }
+
+
+    public Optional<Problem> getProblemById(Long problemId) {
+        return problemRepository.findById(problemId);
+    }
+
+
+
 }
