@@ -1,18 +1,26 @@
 package com.excelr.E_learning_website.Controller;
 
 import com.excelr.E_learning_website.Entity.Problem;
+import com.excelr.E_learning_website.Entity.Userinfo;
 import com.excelr.E_learning_website.Exception.InvalidCategoryException;
 import com.excelr.E_learning_website.Exception.InvalidDifficultyException;
 import com.excelr.E_learning_website.Exception.ProblemNotFoundException;
 import com.excelr.E_learning_website.Exception.UnauthorizedAccessException;
+import com.excelr.E_learning_website.Service.JwtService;
 import com.excelr.E_learning_website.Service.ProblemService;
+import com.excelr.E_learning_website.Service.Userservices;
+import com.excelr.E_learning_website.dto.AuthRequest;
 import com.excelr.E_learning_website.dto.Problemdto;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -21,10 +29,18 @@ import java.util.Set;
 
 
 @RestController
-@RequestMapping("/api/problems")
+@RequestMapping("/api")
 public class ProblemController {
     @Autowired
     ProblemService problemService;
+
+    @Autowired
+    private Userservices service;
+    @Autowired
+    private JwtService jwtService;
+    @Autowired
+    private AuthenticationManager authenticationManager;
+
 
     private static final Set<String> VALID_CATEGORIES = Set.of(
             "Arrays", "Strings", "2D Arrays", "Searching and sorting ",
@@ -35,7 +51,13 @@ public class ProblemController {
 
     private static final Set<String> VALID_DIFFICULTIES = Set.of("Easy", "Medium", "Hard");
 
+    @PostMapping("/adduser")
+    public String addNewUser(@RequestBody Userinfo user){
+        return service.addUser(user);
+    }
+
     @GetMapping
+    @PreAuthorize("hasAuthority('ROLE_USER')")
     public ResponseEntity<List<Problem>> getAllProblems(@RequestParam(required = false) String category,
                                                         @RequestParam(required = false) String difficulty) {
         if (category != null && !VALID_CATEGORIES.contains(category)) {
@@ -48,25 +70,24 @@ public class ProblemController {
         return new ResponseEntity<>(problems, HttpStatus.OK);
     }
     @GetMapping("/{problemId}")
+    @PreAuthorize("hasAuthority('ROLE_USER')")
     public ResponseEntity<Problem> getProblemDetails(@PathVariable Long problemId) {
         Optional<Problem> problem = problemService.getProblemById(problemId);
         return problem.map(value -> new ResponseEntity<>(value, HttpStatus.OK))
                 .orElseGet(() -> new ResponseEntity<>(HttpStatus.NOT_FOUND));
     }
 
-    @PostMapping("create")
+    @PostMapping("/create")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     public ResponseEntity<Problem> createProblem(@RequestBody Problem problem) {
-        if (!isAdmin()) {
-            return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
-        }
+
         Problem createdProblem = problemService.createProblem(problem);
         return new ResponseEntity<>(createdProblem, HttpStatus.CREATED);
     }
     @PutMapping("/{problemId}/update")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     public ResponseEntity<Problem> updateProblem(@PathVariable Long problemId, @RequestBody Problem problem) {
-        if (!isAdmin()) {
-            return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
-        }
+
         try {
             Problem updatedProblem = problemService.updateProblem(problemId, problem);
             return new ResponseEntity<>(updatedProblem, HttpStatus.OK);
@@ -75,10 +96,9 @@ public class ProblemController {
         }
     }
     @DeleteMapping("/{problemId}/delete")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     public ResponseEntity<Void> deleteProblem(@PathVariable Long problemId) {
-        if (!isAdmin()) {
-            return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
-        }
+
         try {
             problemService.deleteProblem(problemId);
             return new ResponseEntity<>(HttpStatus.NO_CONTENT);
@@ -96,6 +116,7 @@ public class ProblemController {
         }
     }
     @GetMapping("/{problemId}/solution")
+    @PreAuthorize("hasAuthority('ROLE_USER')")
     public ResponseEntity<String> getProblemSolution(@PathVariable Long problemId) {
         try {
             String solution = problemService.getSolutionForProblem(problemId);
@@ -105,17 +126,17 @@ public class ProblemController {
         }
     }
 
-    private boolean isAdmin() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null) {
-            return false;
+
+    @PostMapping("/authenticate")
+    public String authenticateAndGetToken(@RequestBody AuthRequest authRequest) {
+        Authentication authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(authRequest.getUsername(), authRequest.getPassword()));
+        if (authentication.isAuthenticated()) {
+            return jwtService.generateToken(authRequest.getUsername());
+        } else {
+            throw new UsernameNotFoundException("invalid user request !");
         }
-        for (GrantedAuthority authority : authentication.getAuthorities()) {
-            if (authority.getAuthority().equals("ROLE_ADMIN")) {
-                return true;
-            }
-        }
-        return false;
+
+
     }
 }
 
